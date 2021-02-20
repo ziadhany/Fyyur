@@ -8,62 +8,20 @@ import logging
 from logging import Formatter, FileHandler
 from sqlalchemy import distinct
 from forms import *
-from flask_sqlalchemy import SQLAlchemy
+from model import db, Show, Venue, Artist
 
 # App Config.
 app = Flask(__name__)
 moment = Moment(app)
 app.config.from_object('config')
-db = SQLAlchemy(app)
+def init_db():
+    db.init_app(app)
+    db.app = app
+    db.create_all()
+
+
 migrate = Migrate(app, db)
-# Models.
-
-
-class Venue(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    city = db.Column(db.String(120))
-    state = db.Column(db.String(120))
-    address = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-    genres = db.Column(db.String(120))
-    website = db.Column(db.String(500))
-    seeking_talent = db.Column(db.Boolean)
-    seeking_description = db.Column(db.String(120))
-    shows = db.relationship("Show", backref="venue", lazy=True)
-
-    def __repr__(self):
-        return '<Venue: {}  - {} >'.format(self.id, self.name)
-
-
-class Artist(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(500))
-    city = db.Column(db.String(500))
-    state = db.Column(db.String(500))
-    phone = db.Column(db.String(500))
-    genres = db.Column(db.String(500))
-    website = db.Column(db.String(500))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(500))
-    seeking_venue = db.Column(db.Boolean)
-    seeking_description = db.Column(db.String(500))
-    shows = db.relationship("Show", backref="artist", lazy=True)
-    def __repr__(self):
-        return '<Artist: {}  - {} >'.format(self.id, self.name)
-
-
-class Show(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    artist_id = db.Column(db.Integer, db.ForeignKey('artist.id'), nullable=False)
-    venue_id = db.Column(db.Integer, db.ForeignKey('venue.id'), nullable=True)
-    start_time = db.Column(db.DateTime, nullable=False)
-
-    def __repr__(self):
-        return '<Show: {}  - {}  >'.format(self.id, self.start_time)
-
+init_db()
 
 def format_datetime(value, format ='medium'):
     date = dateutil.parser.parse(value)
@@ -199,7 +157,7 @@ def create_venue_submission():
         venue = Venue(name=name, genres=genres, city=city, state=state, address=address,
                       phone=phone, website=website,
                       seeking_talent=seeking_talent, seeking_description=seeking_description,
-                      facebook_link= facebook_link, image_link=image_link)
+                      facebook_link=facebook_link, image_link=image_link)
         db.session.add(venue)
         db.session.commit()
         flash('Venue ' + request.form['name'] + ' was successfully listed!')
@@ -245,44 +203,41 @@ def search_artists():
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
-    artist = Artist.query.get(artist_id)
-    shows = Show.query.filter_by(artist_id=artist_id)
-    past_shows = []
-    for show in shows.filter(Show.start_time < datetime.now()).all() :
-        venue = Venue.query.get(show.venue_id)
-        response = {
-            "venue_id": venue.id,
-            "venue_name": venue.name,
-            "venue_image_link": venue.image_link,
-            "start_time": str(show.start_time),
-        }
-        past_shows.append(response)
-    upcoming_shows = []
-    for show in shows.filter(Show.start_time > datetime.now()).all():
-        venue = Venue.query.get(show.venue_id)
-        response = {
-            "venue_id": venue.id,
-            "venue_name": venue.name,
-            "venue_image_link": venue.image_link,
-            "start_time": str(show.start_time),
-        }
-        upcoming_shows.append(response)
-    data = {
-        "id": artist.id,
-        "name": artist.name,
-        "city": artist.city,
-        "state": artist.city,
-        "phone": artist.phone,
-        "website": artist.website,
-        "facebook_link": artist.facebook_link,
-        "seeking_venue": artist.seeking_venue,
-        "seeking_description": artist.seeking_description,
-        "image_link": artist.image_link,
-        "upcoming_shows": upcoming_shows,
-        "past_shows": past_shows,
-        "past_shows_count": len(past_shows),
-        "upcoming_shows_count": len(upcoming_shows),
-    }
+    query = db.session.query(Show).join(Artist, Artist.id == artist_id).join(Venue, Venue.id == Show.venue_id).all()
+    past_shows, upcoming_shows = [], []
+
+    for show in query:
+        if show.start_time > datetime.now():
+            response = {
+                "venue_id": show.venue.id,
+                "venue_name": show.venue.name,
+                "venue_image_link": show.venue.image_link,
+                "start_time": str(show.start_time)}
+            past_shows.append(response)
+        else:
+             response = {
+                "venue_id": show.venue.id,
+                "venue_name": show.venue.name,
+                "venue_image_link": show.venue.image_link,
+                "start_time": str(show.start_time)}
+             upcoming_shows.append(response)
+
+        data = {
+            "id": artist_id,
+            "name": show.artist.name,
+            "city": show.artist.city,
+            "state": show.artist.state,
+            "phone": show.artist.phone,
+            "website": show.artist.website,
+            "facebook_link": show.artist.facebook_link,
+            "seeking_venue": show.artist.seeking_venue,
+            "seeking_description": show.artist.seeking_description,
+            "image_link": show.artist.image_link,
+            "upcoming_shows": upcoming_shows,
+            "past_shows": past_shows,
+            "past_shows_count": len(past_shows),
+             "upcoming_shows_count": len(upcoming_shows),}
+
     return render_template('pages/show_artist.html', artist=data)
 
 
