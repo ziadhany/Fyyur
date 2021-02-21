@@ -31,6 +31,15 @@ def format_datetime(value, format ='medium'):
         format = "EE MM, dd, y h:mma"
     return babel.dates.format_datetime(date, format)
 
+def flash_errors(form):
+    """Flashes form errors"""
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(u"Error in the %s field - %s" % (
+                getattr(form, field).label.text,
+                error
+            ), 'error')
+
 
 app.jinja_env.filters['datetime'] = format_datetime
 
@@ -142,31 +151,36 @@ def create_venue_form():
 
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
-    name = request.form['name']
-    city = request.form['city']
-    state = request.form['state']
-    address = request.form['state']
-    phone = request.form['phone']
-    image_link = request.form['image_link']
-    facebook_link = request.form['facebook_link']
-    genres = json.dumps(request.form.getlist('genres'))
-    website = request.form['website']
-    seeking_talent = True if request.form['seeking_talent'] == 'True' else False
-    seeking_description = request.form['seeking_description']
-    try:
-        venue = Venue(name=name, genres=genres, city=city, state=state, address=address,
-                      phone=phone, website=website,
-                      seeking_talent=seeking_talent, seeking_description=seeking_description,
-                      facebook_link=facebook_link, image_link=image_link)
-        db.session.add(venue)
-        db.session.commit()
-        flash('Venue ' + request.form['name'] + ' was successfully listed!')
-    except:
-        db.session.rollback()
-        flash('An error occurred. Venue ' + request.form['name'] + ' could not be listed.')
-    finally:
-        db.session.close()
-    return render_template('pages/home.html')
+    form = VenueForm(request.form)
+    if form.validate():
+        try:
+            name = request.form['name']
+            city = request.form['city']
+            state = request.form['state']
+            address = request.form['state']
+            phone = request.form['phone']
+            image_link = request.form['image_link']
+            facebook_link = request.form['facebook_link']
+            genres = json.dumps(request.form.getlist('genres'))
+            website = request.form['website']
+            seeking_talent = True if request.form['seeking_talent'] == 'True' else False
+            seeking_description = request.form['seeking_description']
+            venue = Venue(name=name, genres=genres, city=city, state=state, address=address,
+                          phone=phone, website=website,
+                          seeking_talent=seeking_talent, seeking_description=seeking_description,
+                          facebook_link=facebook_link, image_link=image_link)
+            db.session.add(venue)
+            db.session.commit()
+            flash('Venue ' + request.form['name'] + ' was successfully listed!')
+        except:
+            db.session.rollback()
+            flash('An error occurred. Venue ' + request.form['name'] + ' could not be listed.')
+        finally:
+            db.session.close()
+        return render_template('pages/home.html')
+    else:
+        flash_errors(form)
+        return redirect(url_for('create_venue_form', form=form))
 
 
 @app.route('/venues/<venue_id>', methods=['DELETE'])
@@ -263,26 +277,32 @@ def edit_artist(artist_id):
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
-    try:
-        artist = Artist.query.get(artist_id)
-        artist.name = request.form['name']
-        artist.genres = json.dumps(request.form.getlist('genres'))
-        artist.city = request.form['city']
-        artist.state = request.form['state']
-        artist.phone = request.form['phone']
-        artist.website = request.form['website']
-        artist.facebook_link = request.form['facebook_link']
-        artist.seeking_venue = True if request.form['seeking_venue'] == 'True' else False
-        artist.seeking_description = request.form['seeking_description']
-        artist.image_link = request.form['image_link']
-        db.session.add(artist)
-        db.session.commit()
-    except:
-        db.session.rollback()
-        flash('An error occurred edit venues' + str(artist_id))
-    finally:
-        db.session.close()
-        return redirect(url_for('show_artist', artist_id=artist_id))
+    form = ArtistForm(request.form)
+    if form.validate():
+        try:
+            artist = Artist.query.get(artist_id)
+            artist.name = request.form['name']
+            artist.genres = json.dumps(request.form.getlist('genres'))
+            artist.city = request.form['city']
+            artist.state = request.form['state']
+            artist.phone = request.form['phone']
+            artist.website = request.form['website']
+            artist.facebook_link = request.form['facebook_link']
+            artist.seeking_venue = True if request.form['seeking_venue'] == 'True' else False
+            artist.seeking_description = request.form['seeking_description']
+            artist.image_link = request.form['image_link']
+            db.session.add(artist)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            flash('An error occurred edit venues' + str(artist_id))
+        finally:
+            db.session.close()
+            return redirect(url_for('show_artist', artist_id=artist_id))
+    else:
+        flash_errors(form)
+        return redirect(url_for('edit_artist', form=form))
+
 
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
@@ -306,26 +326,30 @@ def edit_venue(venue_id):
 
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
-    try:
-        venue = Venue.query.get(venue_id)
-        venue.name = request.form['name']
-        venue.city = request.form['city']
-        venue.state = request.form['state']
-        venue.genres = json.dumps(request.form.getlist('genres'))
-        venue.address = request.form['address']
-        venue.phone = request.form['phone']
-        venue.facebook_link = request.form['facebook_link']
-        venue.website = request.form['website']
-        venue.image_link = request.form['image_link']
-        db.session.add(venue)
-        db.session.commit()
-    except:
-        db.session.rollback()
-        flash('An error occurred edit venues' + str(venue_id))
-    finally:
-        db.session.close()
-    return redirect(url_for('show_venue', venue_id=venue_id))
-
+    form = VenueForm(request.form)
+    if form.validate():
+        try:
+            venue = Venue.query.get(venue_id)
+            venue.name = request.form['name']
+            venue.city = request.form['city']
+            venue.state = request.form['state']
+            venue.genres = json.dumps(request.form.getlist('genres'))
+            venue.address = request.form['address']
+            venue.phone = request.form['phone']
+            venue.facebook_link = request.form['facebook_link']
+            venue.website = request.form['website']
+            venue.image_link = request.form['image_link']
+            db.session.add(venue)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            flash('An error occurred edit venues' + str(venue_id))
+        finally:
+            db.session.close()
+        return redirect(url_for('show_venue', venue_id=venue_id))
+    else:
+        flash_errors(form)
+        return redirect(url_for('edit_venue', form=form))
 
 #  Create Artist
 #  ----------------------------------------------------------------
@@ -336,31 +360,39 @@ def create_artist_form():
     return render_template('forms/new_artist.html', form=form)
 
 
+
 @app.route('/artists/create', methods=['POST'])
 def create_artist_submission():
-    try:
-        name = request.form['name']
-        city = request.form['city']
-        state = request.form['state']
-        phone = request.form['phone']
-        facebook_link = request.form['facebook_link']
-        seeking_venue = True if request.form['seeking_venue'] == 'True' else False
-        seeking_description = request.form['seeking_description']
-        website = request.form['website']
-        image_link = request.form['image_link']
-        genres = request.form['genres']
-        artist = Artist(name=name, city=city, state=state, phone=phone, website=website
-                            , genres=genres, facebook_link=facebook_link, seeking_venue=seeking_venue
-                            , seeking_description=seeking_description, image_link=image_link)
-        db.session.add(artist)
-        db.session.commit()
-        flash('Artist ' + request.form['name'] + ' was successfully listed!')
-    except:
-        db.session.rollback()
-        flash('An error occurred. Artist ' + request.form['name'] + ' could not be listed.')
-    finally:
-        db.session.close()
-    return render_template('pages/home.html')
+    form = ArtistForm(request.form)
+    if form.validate():
+        try:
+            name = request.form['name']
+            city = request.form['city']
+            state = request.form['state']
+            phone = request.form['phone']
+            facebook_link = request.form['facebook_link']
+            seeking_venue = True if request.form['seeking_venue'] == 'True' else False
+            seeking_description = request.form['seeking_description']
+            website = request.form['website']
+            image_link = request.form['image_link']
+            genres = request.form['genres']
+            artist = Artist(name=name, city=city, state=state, phone=phone, website=website
+                                , genres=genres, facebook_link=facebook_link, seeking_venue=seeking_venue
+                                , seeking_description=seeking_description, image_link=image_link)
+            db.session.add(artist)
+            db.session.commit()
+            flash('Artist ' + request.form['name'] + ' was successfully listed!')
+        except:
+            db.session.rollback()
+            flash('An error occurred. Artist ' + request.form['name'] + ' could not be listed.')
+        finally:
+            db.session.close()
+            return render_template('pages/home.html')
+    else:
+        flash_errors(form)
+        return redirect(url_for('create_artist_form', form=form))
+
+
 
 
 #  Shows
@@ -389,19 +421,24 @@ def create_shows():
 
 @app.route('/shows/create', methods=['POST'])
 def create_show_submission():
-    try:
-        show = Show(artist_id=int(request.form['artist_id']), venue_id=int(request.form['venue_id'])
-                    , start_time=request.form['start_time'])
-        db.session.add(show)
-        db.session.commit()
-        flash('Show was successfully listed!')
+    form = ShowForm(request.form)
+    if form.validate():
+        try:
+            show = Show(artist_id=int(request.form['artist_id']), venue_id=int(request.form['venue_id'])
+                        , start_time=request.form['start_time'])
+            db.session.add(show)
+            db.session.commit()
+            flash('Show was successfully listed!')
 
-    except:
-        db.session.rollback()
-        flash('An error occurred. Show could not be listed.')
-    finally:
-        db.session.close()
-    return render_template('pages/home.html')
+        except:
+            db.session.rollback()
+            flash('An error occurred. Show could not be listed.')
+        finally:
+            db.session.close()
+        return render_template('pages/home.html')
+    else:
+       flash_errors(form)
+       return redirect(url_for('create_shows', form=form ))
 
 
 @app.errorhandler(404)

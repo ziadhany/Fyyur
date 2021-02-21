@@ -1,14 +1,15 @@
 from datetime import datetime
 from flask_wtf import Form
-from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField, BooleanField
-from wtforms.validators import DataRequired, AnyOf, URL
+from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField
+from wtforms.validators import DataRequired, URL, Regexp
+
 
 class ShowForm(Form):
     artist_id = StringField(
-        'artist_id'
+        'artist_id', validators=[DataRequired(),Regexp('\d$')]
     )
     venue_id = StringField(
-        'venue_id'
+        'venue_id', validators=[DataRequired(),Regexp('\d$')]
     )
     start_time = DateTimeField(
         'start_time',
@@ -24,8 +25,7 @@ class VenueForm(Form):
         'city', validators=[DataRequired()]
     )
     state = SelectField(
-        'state', validators=[DataRequired()],
-        choices=[
+        'state', validators=[DataRequired()], choices=[
             ('AL', 'AL'),
             ('AK', 'AK'),
             ('AZ', 'AZ'),
@@ -83,15 +83,17 @@ class VenueForm(Form):
         'address', validators=[DataRequired()]
     )
     phone = StringField(
-        'phone'
+        'phone',
+        validators=[DataRequired(), Regexp('^(([+]{0,1}\d{2})|\d?)[\s-]?[0-9]{2}[\s-]?[0-9]{3}[\s-]?[0-9]{4}$',
+            message='Please add  valid phone number'
+        )]
     )
     image_link = StringField(
-        'image_link'
+        'image_link', validators=[URL()]
     )
     genres = SelectMultipleField(
-        # TODO implement enum restriction
-        'genres', validators=[DataRequired()],
-        choices=[
+
+        'genres', validators=[DataRequired()], choices=[
             ('Alternative', 'Alternative'),
             ('Blues', 'Blues'),
             ('Classical', 'Classical'),
@@ -128,7 +130,7 @@ class VenueForm(Form):
         ]
     )
     seeking_description = StringField(
-        'seeking_description'
+        'seeking_description', validators=[DataRequired()]
     )
 
 class ArtistForm(Form):
@@ -196,9 +198,12 @@ class ArtistForm(Form):
     )
 
     phone = StringField(
-        # TODO implement validation logic for state
-        'phone'
+        'phone',
+        validators=[DataRequired(), Regexp('^(([+]{0,1}\d{2})|\d?)[\s-]?[0-9]{2}[\s-]?[0-9]{3}[\s-]?[0-9]{4}$',
+            message='Please add  valid phone number'
+        )]
     )
+
     image_link = StringField(
         'image_link', validators=[URL()]
     )
@@ -240,6 +245,6 @@ class ArtistForm(Form):
         ]
     )
     seeking_description = StringField(
-        'seeking_description'
+        'seeking_description', validators=[DataRequired()]
     )
 
